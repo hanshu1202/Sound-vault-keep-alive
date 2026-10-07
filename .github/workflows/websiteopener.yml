@@ -9,10 +9,26 @@ on:
 jobs:
   ping:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: "https://neviffymnvgkwpiyxdam.supabase.co"
+      SUPABASE_KEY: "sb_publishable_E16MmYzpkUJVyOTPVCoo9g_cQHKuv6r"
+      BUCKET: "audio"
     steps:
-      - name: Ping Supabase REST API
+      - name: Delete previous keepalive file (if any)
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
-            "https://neviffymnvgkwpiyxdam.supabase.co/rest/v1/tracks?select=id&limit=1" \
-            -H "apikey: sb_publishable_E16MmYzpkUJVyOTPVCoo9g_cQHKuv6r" \
-            -H "Authorization: Bearer sb_publishable_E16MmYzpkUJVyOTPVCoo9g_cQHKuv6r"
+          PREV=$(( ${{ github.run_number }} - 1 ))
+          curl -s -o /dev/null -X DELETE \
+            "$SUPABASE_URL/storage/v1/object/$BUCKET/keepalive/ping-$PREV.txt" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY"
+          echo "Attempted delete of ping-$PREV.txt (fine if it didn't exist, e.g. first run)"
+
+      - name: Upload a fresh tiny keepalive file
+        run: |
+          echo "keepalive ping — run ${{ github.run_number }} — $(date -u)" > ping.txt
+          curl -s -o /dev/null -w "Upload status: %{http_code}\n" -X POST \
+            "$SUPABASE_URL/storage/v1/object/$BUCKET/keepalive/ping-${{ github.run_number }}.txt" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: text/plain" \
+            --data-binary @ping.txt
