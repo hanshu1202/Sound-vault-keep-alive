@@ -1,4 +1,4 @@
-name: Keep Supabase Project Alive
+name: Keep Supabase TTs Project Alive
 
 on:
   schedule:
