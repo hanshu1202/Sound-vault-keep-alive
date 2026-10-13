@@ -1,0 +1,34 @@
+name: Keep Supabase Project Alive
+
+on:
+  schedule:
+    # Runs every 3 days at 00:00 UTC — safely under Supabase's 7-day pause threshold
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # lets you also trigger it manually from the GitHub Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: "https://neviffymnvgkwpiyxdam.supabase.co"
+      SUPABASE_KEY: "sb_publishable_E16MmYzpkUJVyOTPVCoo9g_cQHKuv6r"
+      BUCKET: "audio"
+    steps:
+      - name: Delete previous keepalive file (if any)
+        run: |
+          PREV=$(( ${{ github.run_number }} - 1 ))
+          curl -s -o /dev/null -X DELETE \
+            "$SUPABASE_URL/storage/v1/object/$BUCKET/keepalive/ping-$PREV.txt" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY"
+          echo "Attempted delete of ping-$PREV.txt (fine if it didn't exist, e.g. first run)"
+
+      - name: Upload a fresh tiny keepalive file
+        run: |
+          echo "keepalive ping — run ${{ github.run_number }} — $(date -u)" > ping.txt
+          curl -s -o /dev/null -w "Upload status: %{http_code}\n" -X POST \
+            "$SUPABASE_URL/storage/v1/object/$BUCKET/keepalive/ping-${{ github.run_number }}.txt" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: text/plain" \
+            --data-binary @ping.txt
