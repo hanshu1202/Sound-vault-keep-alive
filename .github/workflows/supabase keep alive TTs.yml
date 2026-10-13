@@ -6,14 +6,20 @@ on:
     - cron: '0 0 */3 * *'
   workflow_dispatch: # lets you also trigger it manually from the GitHub Actions tab
 
+permissions:
+  contents: write # needed to push the keepalive commit
+
 jobs:
   ping:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_URL: "https://neviffymnvgkwpiyxdam.supabase.co"
-      SUPABASE_KEY: "sb_publishable_E16MmYzpkUJVyOTPVCoo9g_cQHKuv6r"
+      SUPABASE_URL: "https://oymyofecetaexesgwrtb.supabase.co"
+      SUPABASE_KEY: "sb_publishable_wd-ubfnxPq3w1W4MKRNsHw_9Jxl1h1-"
       BUCKET: "audio"
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Delete previous keepalive file (if any)
         run: |
           PREV=$(( ${{ github.run_number }} - 1 ))
@@ -32,3 +38,12 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_KEY" \
             -H "Content-Type: text/plain" \
             --data-binary @ping.txt
+
+      - name: Commit keepalive file to GitHub
+        run: |
+          echo "Last keepalive: $(date -u) (run ${{ github.run_number }})" > keepalive.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add keepalive.txt
+          git commit -m "chore: keepalive commit (run ${{ github.run_number }})" || echo "Nothing to commit"
+          git push
